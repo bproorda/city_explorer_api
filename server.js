@@ -31,7 +31,7 @@ function locationHandler(request, response) {
   const location = new Location(city, geoData);
   response.send(location);
 }
-app.get('weather',weatherHandler)
+// app.get('weather',weatherHandler)
 app.get('/bad', (request, response) => {
   throw new Error('whoopsie');
 });
