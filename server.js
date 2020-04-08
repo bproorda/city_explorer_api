@@ -123,8 +123,8 @@ function Location(city, geoData) {
 }
 function Weather(weatherData) {
   this.forecast = weatherData.weather.description;
-  // this.time = new Date(weatherData.valid_date);
-   this.time = weatherData.valid_date;
+  this.time = new Date(weatherData.valid_date).toDateString();
+  //  this.time = weatherData.valid_date;
   //  this.time = new Date(weatherData.ob_time);
 
 }
