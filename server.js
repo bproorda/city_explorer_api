@@ -47,22 +47,69 @@ app.get('/weather', weatherHandler);
 
 
 function weatherHandler(request, response) {
-  const weatherData = require('./data/darksky.json');
-  const weatherResults = [];
+  // const weatherData = require('./data/darksky.json');
+  const latitude = request.query.latitude;
+  const longitude = request.query.longitude;
+  // const weatherResults = [];
   const city = request.query.city;
-  weatherData.daily.data.map(dailyWeather => {
-    weatherResults.push(new Weather(dailyWeather))
-  });
-  response.send(weatherResults);
+  const url = 'https://api.weatherbit.io/v2.0/forecast/daily';
+  superagent.get(url)
+    .query({
+      lat: latitude,
+      lon: longitude,
+      key: process.env.WEATHER_KEY,
+      
+    }).then(weatherResponse => {
+      let weatherData = weatherResponse.body;
+      console.log(weatherData);
+      let dailyResults = weatherData.data.map(dailyWeather => {
+        return new Weather(dailyWeather);
+      });
+      response.send(dailyResults);
+    })
+    .catch(err => {
+      console.log(err);
+      errorHandler(err, request, response);
+    });
 }
 app.get('/bad', (request, response) => {
   throw new Error('whoopsie');
 });
+
+
+//route for hiking trails
+app.get('/trails', trailHandler);
+
+function trailHandler(request, response) {
+  const lat = request.query.latitude;
+  const lon = request.query.longitude;
+  const url = 'https://www.hikingproject.com/data/get-trails';
+  superagent(url)
+  .query({
+    key: process.env.HIKING_KEY,
+    lat: lat,
+    lon: lon,
+    format: 'json'
+    
+  })
+  .then(trailsResponse => {
+    let trailData = trailsResponse.body.trails;
+    console.log(trailData);
+    let trails = trailData.map(data => {
+      return new Trail(data);
+    })
+   
+    response.send(trails);
+  })
+  .catch(err => {
+    console.log(err);
+    errorHandler(err, request, response);
+  });
+}
+
 //has to happen after error has occured
 app.use(errorHandler); // Error Middleware
 app.use(notFoundHandler);
-
-
 // Helper functions
 
 function errorHandler(error, request, response, next) {
@@ -84,8 +131,23 @@ function Location(city, geoData) {
   this.longitude = parseFloat(geoData[0].lon);
 }
 function Weather(weatherData) {
-  this.forecast = weatherData.summary;
-  this.time = new Date(weatherData.time * 1000);
+  this.forecast = weatherData.weather.description;
+  this.time = new Date(weatherData.valid_date).toDateString();
+  //  this.time = weatherData.valid_date;
+  //  this.time = new Date(weatherData.ob_time);
+
+}
+function Trail(trailData) {
+  this.name = trailData.name;
+  this.location = trailData.location;
+  this.length = trailData.length;
+  this.stars = trailData.stars;
+  this.star_votes = trailData.starVotes;
+  this.summary = trailData.summary;
+  this.trail_url = trailData.trail_url;
+  this.conditions = trailData.conditions;
+  this.condition_date = new Date(trailData.conditionDate).toDateString();
+  this.condition_time = new Date(trailData.conditionDate).toLocaleTimeString();
 }
 // Make sure the server is listening for requests
 app.listen(PORT, () => console.log(`App is listening on ${PORT}`));
