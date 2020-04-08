@@ -47,13 +47,30 @@ app.get('/weather', weatherHandler);
 
 
 function weatherHandler(request, response) {
-  const weatherData = require('./data/darksky.json');
+  // const weatherData = require('./data/darksky.json');
+  const latitude = request.query.latitude;
+  const longitude = request.query.longitude;
   const weatherResults = [];
   const city = request.query.city;
-  weatherData.daily.data.map(dailyWeather => {
-    weatherResults.push(new Weather(dailyWeather))
-  });
-  response.send(weatherResults);
+  const url = 'https://api.weatherbit.io/v2.0/forecast/daily';
+  superagent.get(url)
+    .query({
+      lat: latitude,
+      lon: longitude,
+      key: process.env.WEATHER_KEY,
+      
+    }).then(weatherResponse => {
+      let weatherData = weatherResponse.body;
+      console.log(weatherData);
+      let dailyResults = weatherData.data.map(dailyWeather => {
+        return new Weather(dailyWeather);
+      });
+      response.send(dailyResults);
+    })
+    .catch(err => {
+      console.log(err);
+      errorHandler(err, request, response);
+    });
 }
 app.get('/bad', (request, response) => {
   throw new Error('whoopsie');
@@ -84,8 +101,10 @@ function Location(city, geoData) {
   this.longitude = parseFloat(geoData[0].lon);
 }
 function Weather(weatherData) {
-  this.forecast = weatherData.summary;
-  this.time = new Date(weatherData.time * 1000);
+  this.forecast = weatherData.weather.description;
+  this.time = new Date(weatherData.datetime);
+  //  this.time = new Date(weatherData.ob_time);
+
 }
 // Make sure the server is listening for requests
 app.listen(PORT, () => console.log(`App is listening on ${PORT}`));
