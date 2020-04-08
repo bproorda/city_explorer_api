@@ -50,7 +50,7 @@ function weatherHandler(request, response) {
   // const weatherData = require('./data/darksky.json');
   const latitude = request.query.latitude;
   const longitude = request.query.longitude;
-  const weatherResults = [];
+  // const weatherResults = [];
   const city = request.query.city;
   const url = 'https://api.weatherbit.io/v2.0/forecast/daily';
   superagent.get(url)
@@ -75,11 +75,30 @@ function weatherHandler(request, response) {
 app.get('/bad', (request, response) => {
   throw new Error('whoopsie');
 });
+
+
+//route for hiking trails
+app.get('/trails', trailHandler);
+
+function trailHandler(request, response) {
+  const latitude = request.query.latitude;
+  const longitude = request.query.longitude;
+  const url = 'https://www.hikingproject.com/data/get-trails';
+  superagent(url)
+  .query({
+    key: process.env.HIKING_KEY,
+    lat: latitude,
+      lon: longitude,
+  })
+  .then(trailsResponse => {
+    let trailData = trailResponse.body;
+    console.log(trailData);
+  })
+}
+
 //has to happen after error has occured
 app.use(errorHandler); // Error Middleware
 app.use(notFoundHandler);
-
-
 // Helper functions
 
 function errorHandler(error, request, response, next) {
