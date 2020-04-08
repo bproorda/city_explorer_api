@@ -6,6 +6,7 @@ require('dotenv').config();
 // Application Dependencies
 const express = require('express');
 const cors = require('cors');
+const superagent = require('superagent');
 
 // Application Setup
 const PORT = process.env.PORT;
@@ -19,25 +20,40 @@ app.get('/', (request, response) => {
 // Add /location route
 app.get('/location', locationHandler);
 
-//Route Handler
+//Route Handler for location
 function locationHandler(request, response) {
-  const geoData = require('./data/geo.json');
+  // const geoData = require('./data/geo.json');
   const city = request.query.city;
-  const location = new Location(city, geoData);
-  response.send(location);
+  const url = 'https://us1.locationiq.com/v1/search.php';
+  superagent.get(url)
+    .query({
+      key: process.env.GEO_KEY,
+      q: city,
+      format: 'json'
+    })
+    .then(locationResponse => {
+      let geoData = locationResponse.body;
+      console.log(geoData);
+      const location = new Location(city, geoData);
+      response.send(location);
+    })
+    .catch(err => {
+      console.log(err);
+      errorHandler(err, request, response);
+    });
 }
 //Route Handler for weather
 app.get('/weather', weatherHandler);
 
 
-function weatherHandler(request, response){
-const weatherData = require('./data/darksky.json');
-const weatherResults = [];
-const city = request.query.city;
-weatherData.daily.data.forEach(dailyWeather => {
-  weatherResults.push(new Weather(dailyWeather))
-});
-response.send(weatherResults);
+function weatherHandler(request, response) {
+  const weatherData = require('./data/darksky.json');
+  const weatherResults = [];
+  const city = request.query.city;
+  weatherData.daily.data.map(dailyWeather => {
+    weatherResults.push(new Weather(dailyWeather))
+  });
+  response.send(weatherResults);
 }
 app.get('/bad', (request, response) => {
   throw new Error('whoopsie');
