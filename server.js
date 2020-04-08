@@ -93,9 +93,18 @@ function trailHandler(request, response) {
     
   })
   .then(trailsResponse => {
-    let trailData = trailsResponse.body;
+    let trailData = trailsResponse.body.trails;
     console.log(trailData);
+    let trails = trailData.map(data => {
+      return new Trail(data);
+    })
+   
+    response.send(trails);
   })
+  .catch(err => {
+    console.log(err);
+    errorHandler(err, request, response);
+  });
 }
 
 //has to happen after error has occured
@@ -127,6 +136,18 @@ function Weather(weatherData) {
   //  this.time = weatherData.valid_date;
   //  this.time = new Date(weatherData.ob_time);
 
+}
+function Trail(trailData) {
+  this.name = trailData.name;
+  this.location = trailData.location;
+  this.length = trailData.length;
+  this.stars = trailData.stars;
+  this.star_votes = trailData.starVotes;
+  this.summary = trailData.summary;
+  this.trail_url = trailData.trail_url;
+  this.conditions = trailData.conditions;
+  this.condition_date = new Date(trailData.conditionDate).toDateString();
+  this.condition_time = new Date(trailData.conditionDate).toLocaleTimeString();
 }
 // Make sure the server is listening for requests
 app.listen(PORT, () => console.log(`App is listening on ${PORT}`));
