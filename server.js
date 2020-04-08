@@ -88,7 +88,8 @@ function trailHandler(request, response) {
   .query({
     key: process.env.HIKING_KEY,
     lat: latitude,
-      lon: longitude,
+    lon: longitude,
+    
   })
   .then(trailsResponse => {
     let trailData = trailResponse.body;
@@ -121,7 +122,8 @@ function Location(city, geoData) {
 }
 function Weather(weatherData) {
   this.forecast = weatherData.weather.description;
-  this.time = new Date(weatherData.datetime);
+  // this.time = new Date(weatherData.valid_date);
+   this.time = weatherData.valid_date;
   //  this.time = new Date(weatherData.ob_time);
 
 }
