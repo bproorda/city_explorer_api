@@ -7,11 +7,6 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
-
-
-
-
-
 // Application Setup
 const PORT = process.env.PORT;
 const app = express();
@@ -31,15 +26,26 @@ function locationHandler(request, response) {
   const location = new Location(city, geoData);
   response.send(location);
 }
-// app.get('weather',weatherHandler)
+//Route Handler for weather
+app.get('/weather', weatherHandler);
+
+
+function weatherHandler(request, response){
+const weatherData = require('./data/darksky.json');
+const weatherResults = [];
+const city = request.query.city;
+weatherData.daily.data.forEach(dailyWeather => {
+  weatherResults.push(new Weather(dailyWeather))
+});
+response.send(weatherResults);
+}
 app.get('/bad', (request, response) => {
   throw new Error('whoopsie');
 });
 //has to happen after error has occured
 app.use(errorHandler); // Error Middleware
 app.use(notFoundHandler);
-// Make sure the server is listening for requests
-app.listen(PORT, () => console.log(`App is listening on ${PORT}`));
+
 
 // Helper functions
 
@@ -57,7 +63,13 @@ function notFoundHandler(request, response) {
 
 function Location(city, geoData) {
   this.search_Query = city;
-  this. formatted_query = geoData[0].display_name;
+  this.formatted_query = geoData[0].display_name;
   this.latitude = parseFloat(geoData[0].lat);
   this.longitude = parseFloat(geoData[0].lon);
 }
+function Weather(weatherData) {
+  this.forecast = weatherData.summary;
+  this.time = new Date(weatherData.time * 1000);
+}
+// Make sure the server is listening for requests
+app.listen(PORT, () => console.log(`App is listening on ${PORT}`));
