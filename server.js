@@ -81,18 +81,19 @@ app.get('/bad', (request, response) => {
 app.get('/trails', trailHandler);
 
 function trailHandler(request, response) {
-  const latitude = request.query.latitude;
-  const longitude = request.query.longitude;
+  const lat = request.query.latitude;
+  const lon = request.query.longitude;
   const url = 'https://www.hikingproject.com/data/get-trails';
   superagent(url)
   .query({
     key: process.env.HIKING_KEY,
-    lat: latitude,
-    lon: longitude,
+    lat: lat,
+    lon: lon,
+    format: 'json'
     
   })
   .then(trailsResponse => {
-    let trailData = trailResponse.body;
+    let trailData = trailsResponse.body;
     console.log(trailData);
   })
 }
