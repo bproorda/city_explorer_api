@@ -7,6 +7,11 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const superagent = require('superagent');
+const pg = require('pg');
+
+//Database connection setup
+const client = new pg.Client(process.env.DATABASE_URL);
+client.on('error', err => { throw err; });
 
 // Application Setup
 const PORT = process.env.PORT;
@@ -58,7 +63,7 @@ function weatherHandler(request, response) {
       lat: latitude,
       lon: longitude,
       key: process.env.WEATHER_KEY,
-      
+
     }).then(weatherResponse => {
       let weatherData = weatherResponse.body;
       console.log(weatherData);
@@ -85,26 +90,26 @@ function trailHandler(request, response) {
   const lon = request.query.longitude;
   const url = 'https://www.hikingproject.com/data/get-trails';
   superagent(url)
-  .query({
-    key: process.env.HIKING_KEY,
-    lat: lat,
-    lon: lon,
-    format: 'json'
-    
-  })
-  .then(trailsResponse => {
-    let trailData = trailsResponse.body.trails;
-    console.log(trailData);
-    let trails = trailData.map(data => {
-      return new Trail(data);
+    .query({
+      key: process.env.HIKING_KEY,
+      lat: lat,
+      lon: lon,
+      format: 'json'
+
     })
-   
-    response.send(trails);
-  })
-  .catch(err => {
-    console.log(err);
-    errorHandler(err, request, response);
-  });
+    .then(trailsResponse => {
+      let trailData = trailsResponse.body.trails;
+      console.log(trailData);
+      let trails = trailData.map(data => {
+        return new Trail(data);
+      })
+
+      response.send(trails);
+    })
+    .catch(err => {
+      console.log(err);
+      errorHandler(err, request, response);
+    });
 }
 
 //has to happen after error has occured
@@ -149,5 +154,13 @@ function Trail(trailData) {
   this.condition_date = new Date(trailData.conditionDate).toDateString();
   this.condition_time = new Date(trailData.conditionDate).toLocaleTimeString();
 }
-// Make sure the server is listening for requests
-app.listen(PORT, () => console.log(`App is listening on ${PORT}`));
+// Make sure the server is listening for requests after connecting to Database first
+client.connect()
+  .then(() => {
+    console.log('PG connected!');
+    app.listen(PORT, () => console.log(`App is listening on ${PORT}`));
+  })
+  .catch( err => {
+    throw `PG ERROR! : ${err.message}`
+  });
+
