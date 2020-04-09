@@ -7,6 +7,12 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const superagent = require('superagent');
+const pg = require('pg');
+
+//Database connection setup
+if (!process.env.DATABASE_URL) { throw 'Missing DATABASE_URL'};
+const client = new pg.Client(process.env.DATABASE_URL);
+client.on('error', err => { throw err; });
 
 // Application Setup
 const PORT = process.env.PORT;
@@ -22,25 +28,37 @@ app.get('/location', locationHandler);
 
 //Route Handler for location
 function locationHandler(request, response) {
-  // const geoData = require('./data/geo.json');
   const city = request.query.city;
   const url = 'https://us1.locationiq.com/v1/search.php';
-  superagent.get(url)
-    .query({
-      key: process.env.GEO_KEY,
-      q: city,
-      format: 'json'
-    })
-    .then(locationResponse => {
-      let geoData = locationResponse.body;
-      console.log(geoData);
-      const location = new Location(city, geoData);
-      response.send(location);
-    })
-    .catch(err => {
-      console.log(err);
-      errorHandler(err, request, response);
-    });
+  const SQL = 'SELECT * FROM locations WHERE search_query = $1';
+  const sqlParameters = [city];
+client.query(SQL, sqlParameters)
+  .then(results => {
+    let { rowCount, rows } = results
+    
+
+    if (rowCount === 0) {
+      superagent.get(url)
+      .query({
+        key: process.env.GEO_KEY,
+        q: city,
+        format: 'json'
+      })
+      .then(locationResponse => {
+        let geoData = locationResponse.body;
+        console.log(geoData);
+        const location = new Location(city, geoData);
+        const SQL2 = 'INSERT INTO locations(search_query, formatted_query, latitude, longitude) VALUES($1, $2, $3, $4)';
+        const sqlParameters2 = [location.search_Query, location.formatted_query, location.latitude, location.longitude];
+        client.query(SQL2, sqlParameters2);
+        response.send(location);
+      })
+    } else {
+      console.log('using saved data!');
+      response.json(results.rows[0]);
+    }
+   
+  })
 }
 //Route Handler for weather
 app.get('/weather', weatherHandler);
@@ -58,7 +76,7 @@ function weatherHandler(request, response) {
       lat: latitude,
       lon: longitude,
       key: process.env.WEATHER_KEY,
-      
+
     }).then(weatherResponse => {
       let weatherData = weatherResponse.body;
       console.log(weatherData);
@@ -76,7 +94,6 @@ app.get('/bad', (request, response) => {
   throw new Error('whoopsie');
 });
 
-
 //route for hiking trails
 app.get('/trails', trailHandler);
 
@@ -85,26 +102,26 @@ function trailHandler(request, response) {
   const lon = request.query.longitude;
   const url = 'https://www.hikingproject.com/data/get-trails';
   superagent(url)
-  .query({
-    key: process.env.HIKING_KEY,
-    lat: lat,
-    lon: lon,
-    format: 'json'
-    
-  })
-  .then(trailsResponse => {
-    let trailData = trailsResponse.body.trails;
-    console.log(trailData);
-    let trails = trailData.map(data => {
-      return new Trail(data);
+    .query({
+      key: process.env.HIKING_KEY,
+      lat: lat,
+      lon: lon,
+      format: 'json'
+
     })
-   
-    response.send(trails);
-  })
-  .catch(err => {
-    console.log(err);
-    errorHandler(err, request, response);
-  });
+    .then(trailsResponse => {
+      let trailData = trailsResponse.body.trails;
+      console.log(trailData);
+      let trails = trailData.map(data => {
+        return new Trail(data);
+      })
+
+      response.send(trails);
+    })
+    .catch(err => {
+      console.log(err);
+      errorHandler(err, request, response);
+    });
 }
 
 //has to happen after error has occured
@@ -129,6 +146,7 @@ function Location(city, geoData) {
   this.formatted_query = geoData[0].display_name;
   this.latitude = parseFloat(geoData[0].lat);
   this.longitude = parseFloat(geoData[0].lon);
+  
 }
 function Weather(weatherData) {
   this.forecast = weatherData.weather.description;
@@ -149,5 +167,13 @@ function Trail(trailData) {
   this.condition_date = new Date(trailData.conditionDate).toDateString();
   this.condition_time = new Date(trailData.conditionDate).toLocaleTimeString();
 }
-// Make sure the server is listening for requests
-app.listen(PORT, () => console.log(`App is listening on ${PORT}`));
+// Make sure the server is listening for requests after connecting to Database first
+client.connect()
+  .then(() => {
+    console.log('PG connected!');
+    app.listen(PORT, () => console.log(`App is listening on ${PORT}`));
+  })
+  .catch( err => {
+    throw `PG ERROR! : ${err.message}`
+  });
+
