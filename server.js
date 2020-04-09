@@ -10,6 +10,7 @@ const superagent = require('superagent');
 const pg = require('pg');
 
 //Database connection setup
+if (!process.env.DATABASE_URL) { throw 'Missing DATABASE_URL'};
 const client = new pg.Client(process.env.DATABASE_URL);
 client.on('error', err => { throw err; });
 
@@ -27,25 +28,37 @@ app.get('/location', locationHandler);
 
 //Route Handler for location
 function locationHandler(request, response) {
-  // const geoData = require('./data/geo.json');
   const city = request.query.city;
   const url = 'https://us1.locationiq.com/v1/search.php';
-  superagent.get(url)
-    .query({
-      key: process.env.GEO_KEY,
-      q: city,
-      format: 'json'
-    })
-    .then(locationResponse => {
-      let geoData = locationResponse.body;
-      console.log(geoData);
-      const location = new Location(city, geoData);
-      response.send(location);
-    })
-    .catch(err => {
-      console.log(err);
-      errorHandler(err, request, response);
-    });
+  const SQL = 'SELECT * FROM locations WHERE search_query = $1';
+  const sqlParameters = [city];
+client.query(SQL, sqlParameters)
+  .then(results => {
+    let { rowCount, rows } = results
+    
+
+    if (rowCount === 0) {
+      superagent.get(url)
+      .query({
+        key: process.env.GEO_KEY,
+        q: city,
+        format: 'json'
+      })
+      .then(locationResponse => {
+        let geoData = locationResponse.body;
+        console.log(geoData);
+        const location = new Location(city, geoData);
+        const SQL2 = 'INSERT INTO locations(search_query, formatted_query, latitude, longitude) VALUES($1, $2, $3, $4)';
+        const sqlParameters2 = [location.search_Query, location.formatted_query, location.latitude, location.longitude];
+        client.query(SQL2, sqlParameters2);
+        response.send(location);
+      })
+    } else {
+      console.log('using saved data!');
+      response.json(results.rows[0]);
+    }
+   
+  })
 }
 //Route Handler for weather
 app.get('/weather', weatherHandler);
@@ -80,7 +93,6 @@ function weatherHandler(request, response) {
 app.get('/bad', (request, response) => {
   throw new Error('whoopsie');
 });
-
 
 //route for hiking trails
 app.get('/trails', trailHandler);
@@ -134,6 +146,7 @@ function Location(city, geoData) {
   this.formatted_query = geoData[0].display_name;
   this.latitude = parseFloat(geoData[0].lat);
   this.longitude = parseFloat(geoData[0].lon);
+  
 }
 function Weather(weatherData) {
   this.forecast = weatherData.weather.description;
