@@ -11,6 +11,7 @@ const pg = require('pg');
 const locationHandler = require('./modules/location');
 const weatherHandler = require('./modules/weather');
 const trailHandler = require('./modules/hiking');
+const yelpHandler = require('./modules/yelp');
 const client = require('./util/db');
 
 // Application Setup
@@ -25,6 +26,7 @@ app.get('/', (request, response) => {
 app.get('/location', locationHandler);
 app.get('/weather', weatherHandler);
 app.get('/trails', trailHandler);
+app.get('/yelp', yelpHandler);
 app.get('/bad', (request, response) => {
   throw new Error('whoopsie');
 });
