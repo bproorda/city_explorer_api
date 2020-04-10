@@ -65,11 +65,10 @@ function getLocationFromDB(city) {
   function setLocationInDB(location) {
     const SQL2 = 'INSERT INTO locations(search_query, formatted_query, latitude, longitude) VALUES($1, $2, $3, $4)';
     const sqlParameters2 = [location.search_Query, location.formatted_query, location.latitude, location.longitude];
-    client.query(SQL2, sqlParameters2).then(result => {
+    return client.query(SQL2, sqlParameters2).then(result => {
       console.log('location cached', result);
     }).catch(err => {
       console.log(err);
-      errorHandler(err, request, response);
     });
   }
   function Location(city, geoData) {
