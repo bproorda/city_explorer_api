@@ -13,36 +13,27 @@ const weatherHandler = require('./modules/weather');
 const trailHandler = require('./modules/hiking');
 const client = require('./util/db');
 
-
 // Application Setup
 const PORT = process.env.PORT;
 const app = express();
-
 app.use(cors()); //middleware
 
+//routes
 app.get('/', (request, response) => {
   response.send('Home Page!');
 });
-// location route
 app.get('/location', locationHandler);
-
-
-//Route Handler for weather
 app.get('/weather', weatherHandler);
-
+app.get('/trails', trailHandler);
 app.get('/bad', (request, response) => {
   throw new Error('whoopsie');
 });
 
-
-//route for hiking trails
-app.get('/trails', trailHandler);
-
 //has to happen after error has occured
 app.use(errorHandler); // Error Middleware
 app.use(notFoundHandler);
-// Helper functions
 
+// Helper functions
 function errorHandler(error, request, response, next) {
   response.status(500).json({
     error: true,
@@ -55,7 +46,7 @@ function notFoundHandler(request, response) {
   });
 }
 
-// Make sure the server is listening for requests after connecting to Database first
+// Connecting to Database and then Port
 client.connect()
   .then(() => {
     console.log('PG connected!');
