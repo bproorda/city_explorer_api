@@ -48,9 +48,7 @@ client.query(SQL, sqlParameters)
         let geoData = locationResponse.body;
         console.log(geoData);
         const location = new Location(city, geoData);
-        const SQL2 = 'INSERT INTO locations(search_query, formatted_query, latitude, longitude) VALUES($1, $2, $3, $4)';
-        const sqlParameters2 = [location.search_Query, location.formatted_query, location.latitude, location.longitude];
-        client.query(SQL2, sqlParameters2);
+        setLocationInDB(location);
         response.send(location);
       })
     } else {
@@ -59,6 +57,12 @@ client.query(SQL, sqlParameters)
     }
    
   })
+}
+
+function setLocationInDB(location) {
+  const SQL2 = 'INSERT INTO locations(search_query, formatted_query, latitude, longitude) VALUES($1, $2, $3, $4)';
+  const sqlParameters2 = [location.search_Query, location.formatted_query, location.latitude, location.longitude];
+  client.query(SQL2, sqlParameters2);
 }
 //Route Handler for weather
 app.get('/weather', weatherHandler);
