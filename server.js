@@ -8,162 +8,32 @@ const express = require('express');
 const cors = require('cors');
 const superagent = require('superagent');
 const pg = require('pg');
-
-//Database connection setup
-if (!process.env.DATABASE_URL) { throw 'Missing DATABASE_URL' };
-const client = new pg.Client(process.env.DATABASE_URL);
-client.on('error', err => { throw err; });
+const locationHandler = require('./modules/location');
+const weatherHandler = require('./modules/weather');
+const trailHandler = require('./modules/hiking');
+const client = require('./util/db');
 
 // Application Setup
 const PORT = process.env.PORT;
 const app = express();
-
 app.use(cors()); //middleware
 
+//routes
 app.get('/', (request, response) => {
   response.send('Home Page!');
 });
-// Add /location route
 app.get('/location', locationHandler);
-
-//getting location from database...hopefully
-function getLocationFromDB(city) {
-  const SQL = 'SELECT * FROM locations WHERE search_query = $1';
-  const sqlParameters = [city];
-  return client.query(SQL, sqlParameters)
-    .then(result => {
-      if (result.rowCount > 0) {
-        return (result.rows[0]);
-      }
-      else {
-        return null;
-      }
-    }).catch(err => {
-      console.log(err);
-      errorHandler(err, request, response);
-    });
-}
-
-
-//Route Handler for location
-function locationHandler(request, response) {
-  const city = request.query.city;
-  const url = 'https://us1.locationiq.com/v1/search.php';
-  getLocationFromDB(city).then(location => {
-    if (location) {
-      console.log('Location from database', location);
-      return location;
-    } else {
-      return getLocationFromAPI(city);
-    }
-  }).then(result => {
-    response.send(result);
-  }).catch(err => {
-    console.log(err);
-    errorHandler(err, request, response);
-  });
-}
-
-//Using api to get location
-function getLocationFromAPI(city) {
-  console.log('requesting info from api');
-  const url = 'https://us1.locationiq.com/v1/search.php';
-  return superagent.get(url)
-    .query({
-      key: process.env.GEO_KEY,
-      q: city,
-      format: 'json'
-    })
-    .then(locationResponse => {
-      let geoData = locationResponse.body;
-      const location = new Location(city, geoData);
-      setLocationInDB(location);
-      return location;
-    }).catch(err => {
-      console.log(err);
-      errorHandler(err, request, response);
-    });
-}
-
-function setLocationInDB(location) {
-  const SQL2 = 'INSERT INTO locations(search_query, formatted_query, latitude, longitude) VALUES($1, $2, $3, $4)';
-  const sqlParameters2 = [location.search_Query, location.formatted_query, location.latitude, location.longitude];
-  client.query(SQL2, sqlParameters2).then(result => {
-    console.log('location cached', result);
-  }).catch(err => {
-    console.log(err);
-    errorHandler(err, request, response);
-  });
-}
-//Route Handler for weather
 app.get('/weather', weatherHandler);
-
-
-function weatherHandler(request, response) {
-  // const weatherData = require('./data/darksky.json');
-  const latitude = request.query.latitude;
-  const longitude = request.query.longitude;
-  // const weatherResults = [];
-  const city = request.query.city;
-  const url = 'https://api.weatherbit.io/v2.0/forecast/daily';
-  superagent.get(url)
-    .query({
-      lat: latitude,
-      lon: longitude,
-      key: process.env.WEATHER_KEY,
-
-    }).then(weatherResponse => {
-      let weatherData = weatherResponse.body;
-      console.log(weatherData);
-      let dailyResults = weatherData.data.map(dailyWeather => {
-        return new Weather(dailyWeather);
-      });
-      response.send(dailyResults);
-    })
-    .catch(err => {
-      console.log(err);
-      errorHandler(err, request, response);
-    });
-}
+app.get('/trails', trailHandler);
 app.get('/bad', (request, response) => {
   throw new Error('whoopsie');
 });
 
-//route for hiking trails
-app.get('/trails', trailHandler);
-
-function trailHandler(request, response) {
-  const lat = request.query.latitude;
-  const lon = request.query.longitude;
-  const url = 'https://www.hikingproject.com/data/get-trails';
-  superagent(url)
-    .query({
-      key: process.env.HIKING_KEY,
-      lat: lat,
-      lon: lon,
-      format: 'json'
-
-    })
-    .then(trailsResponse => {
-      let trailData = trailsResponse.body.trails;
-      console.log(trailData);
-      let trails = trailData.map(data => {
-        return new Trail(data);
-      })
-
-      response.send(trails);
-    })
-    .catch(err => {
-      console.log(err);
-      errorHandler(err, request, response);
-    });
-}
-
 //has to happen after error has occured
 app.use(errorHandler); // Error Middleware
 app.use(notFoundHandler);
-// Helper functions
 
+// Helper functions
 function errorHandler(error, request, response, next) {
   response.status(500).json({
     error: true,
@@ -176,33 +46,7 @@ function notFoundHandler(request, response) {
   });
 }
 
-function Location(city, geoData) {
-  this.search_Query = city;
-  this.formatted_query = geoData[0].display_name;
-  this.latitude = parseFloat(geoData[0].lat);
-  this.longitude = parseFloat(geoData[0].lon);
-
-}
-function Weather(weatherData) {
-  this.forecast = weatherData.weather.description;
-  this.time = new Date(weatherData.valid_date).toDateString();
-  //  this.time = weatherData.valid_date;
-  //  this.time = new Date(weatherData.ob_time);
-
-}
-function Trail(trailData) {
-  this.name = trailData.name;
-  this.location = trailData.location;
-  this.length = trailData.length;
-  this.stars = trailData.stars;
-  this.star_votes = trailData.starVotes;
-  this.summary = trailData.summary;
-  this.trail_url = trailData.trail_url;
-  this.conditions = trailData.conditions;
-  this.condition_date = new Date(trailData.conditionDate).toDateString();
-  this.condition_time = new Date(trailData.conditionDate).toLocaleTimeString();
-}
-// Make sure the server is listening for requests after connecting to Database first
+// Connecting to Database and then Port
 client.connect()
   .then(() => {
     console.log('PG connected!');
