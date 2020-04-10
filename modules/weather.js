@@ -1,11 +1,10 @@
 
 const superagent = require('superagent');
+const errorHandler = require('../util/error');
 
 function weatherHandler(request, response) {
-    // const weatherData = require('./data/darksky.json');
     const latitude = request.query.latitude;
     const longitude = request.query.longitude;
-    // const weatherResults = [];
     const city = request.query.city;
     const url = 'https://api.weatherbit.io/v2.0/forecast/daily';
     superagent.get(url)

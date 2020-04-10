@@ -8,9 +8,12 @@ const express = require('express');
 const cors = require('cors');
 const superagent = require('superagent');
 const pg = require('pg');
+const errorHandler = require('./util/error');
 const locationHandler = require('./modules/location');
 const weatherHandler = require('./modules/weather');
 const trailHandler = require('./modules/hiking');
+const yelpHandler = require('./modules/yelp');
+const movieHandler = require('./modules/movie');
 const client = require('./util/db');
 
 // Application Setup
@@ -25,6 +28,8 @@ app.get('/', (request, response) => {
 app.get('/location', locationHandler);
 app.get('/weather', weatherHandler);
 app.get('/trails', trailHandler);
+app.get('/yelp', yelpHandler);
+app.get('/movies', movieHandler);
 app.get('/bad', (request, response) => {
   throw new Error('whoopsie');
 });
@@ -34,12 +39,7 @@ app.use(errorHandler); // Error Middleware
 app.use(notFoundHandler);
 
 // Helper functions
-function errorHandler(error, request, response, next) {
-  response.status(500).json({
-    error: true,
-    message: error.message,
-  });
-}
+
 function notFoundHandler(request, response) {
   response.status(404).json({
     notFound: true,
