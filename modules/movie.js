@@ -1,7 +1,7 @@
 const superagent = require('superagent');
 const errorHandler = require('../util/error');
 
-function movieHandler(response) {
+function movieHandler(request, response) {
     let movie = {
 
         title: "Sleepless in Seattle",
@@ -13,7 +13,7 @@ function movieHandler(response) {
         released_on: "1993-06-24"
     
     }
-    response.send(movie);
+    response.send([movie]);
 
 }
 
