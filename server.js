@@ -9,6 +9,7 @@ const cors = require('cors');
 const superagent = require('superagent');
 const pg = require('pg');
 const locationHandler = require('./modules/location');
+const weatherHandler = require('./modules/weather');
 const client = require('./util/db');
 
 
@@ -21,43 +22,17 @@ app.use(cors()); //middleware
 app.get('/', (request, response) => {
   response.send('Home Page!');
 });
-// Add /location route
+// location route
 app.get('/location', locationHandler);
 
 
 //Route Handler for weather
 app.get('/weather', weatherHandler);
 
-
-function weatherHandler(request, response) {
-  // const weatherData = require('./data/darksky.json');
-  const latitude = request.query.latitude;
-  const longitude = request.query.longitude;
-  // const weatherResults = [];
-  const city = request.query.city;
-  const url = 'https://api.weatherbit.io/v2.0/forecast/daily';
-  superagent.get(url)
-    .query({
-      lat: latitude,
-      lon: longitude,
-      key: process.env.WEATHER_KEY,
-
-    }).then(weatherResponse => {
-      let weatherData = weatherResponse.body;
-      console.log(weatherData);
-      let dailyResults = weatherData.data.map(dailyWeather => {
-        return new Weather(dailyWeather);
-      });
-      response.send(dailyResults);
-    })
-    .catch(err => {
-      console.log(err);
-      errorHandler(err, request, response);
-    });
-}
 app.get('/bad', (request, response) => {
   throw new Error('whoopsie');
 });
+
 
 //route for hiking trails
 app.get('/trails', trailHandler);
@@ -113,13 +88,7 @@ function Location(city, geoData) {
   this.longitude = parseFloat(geoData[0].lon);
 
 }
-function Weather(weatherData) {
-  this.forecast = weatherData.weather.description;
-  this.time = new Date(weatherData.valid_date).toDateString();
-  //  this.time = weatherData.valid_date;
-  //  this.time = new Date(weatherData.ob_time);
 
-}
 function Trail(trailData) {
   this.name = trailData.name;
   this.location = trailData.location;
