@@ -2,7 +2,7 @@
 
 const superagent = require('superagent');
 const client = require('../util/db');
-
+const errorHandler = require('../util/error');
 //getting location from database...hopefully
 function getLocationFromDB(city) {
     const SQL = 'SELECT * FROM locations WHERE search_query = $1';

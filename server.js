@@ -8,6 +8,7 @@ const express = require('express');
 const cors = require('cors');
 const superagent = require('superagent');
 const pg = require('pg');
+const errorHandler = require('./util/error');
 const locationHandler = require('./modules/location');
 const weatherHandler = require('./modules/weather');
 const trailHandler = require('./modules/hiking');
@@ -36,12 +37,7 @@ app.use(errorHandler); // Error Middleware
 app.use(notFoundHandler);
 
 // Helper functions
-function errorHandler(error, request, response, next) {
-  response.status(500).json({
-    error: true,
-    message: error.message,
-  });
-}
+
 function notFoundHandler(request, response) {
   response.status(404).json({
     notFound: true,

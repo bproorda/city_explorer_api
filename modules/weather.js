@@ -1,5 +1,6 @@
 
 const superagent = require('superagent');
+const errorHandler = require('../util/error');
 
 function weatherHandler(request, response) {
     const latitude = request.query.latitude;

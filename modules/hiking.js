@@ -1,6 +1,7 @@
 'use strict';
 
 const superagent = require('superagent');
+const errorHandler = require('../util/error');
 
 function trailHandler(request, response) {
   const lat = request.query.latitude;
