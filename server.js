@@ -13,6 +13,7 @@ const locationHandler = require('./modules/location');
 const weatherHandler = require('./modules/weather');
 const trailHandler = require('./modules/hiking');
 const yelpHandler = require('./modules/yelp');
+const movieHandler = require('./modules/movie');
 const client = require('./util/db');
 
 // Application Setup
@@ -28,6 +29,7 @@ app.get('/location', locationHandler);
 app.get('/weather', weatherHandler);
 app.get('/trails', trailHandler);
 app.get('/yelp', yelpHandler);
+app.get('/movies', movieHandler);
 app.get('/bad', (request, response) => {
   throw new Error('whoopsie');
 });
