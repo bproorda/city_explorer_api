@@ -10,7 +10,7 @@ const superagent = require('superagent');
 const pg = require('pg');
 
 //Database connection setup
-if (!process.env.DATABASE_URL) { throw 'Missing DATABASE_URL'};
+if (!process.env.DATABASE_URL) { throw 'Missing DATABASE_URL' };
 const client = new pg.Client(process.env.DATABASE_URL);
 client.on('error', err => { throw err; });
 
@@ -26,43 +26,74 @@ app.get('/', (request, response) => {
 // Add /location route
 app.get('/location', locationHandler);
 
+//getting location from database...hopefully
+function getLocationFromDB(city) {
+  const SQL = 'SELECT * FROM locations WHERE search_query = $1';
+  const sqlParameters = [city];
+  return client.query(SQL, sqlParameters)
+    .then(result => {
+      if (result.rowCount > 0) {
+        return (result.rows[0]);
+      }
+      else {
+        return null;
+      }
+    }).catch(err => {
+      console.log(err);
+      errorHandler(err, request, response);
+    });
+}
+
+
 //Route Handler for location
 function locationHandler(request, response) {
   const city = request.query.city;
   const url = 'https://us1.locationiq.com/v1/search.php';
-  const SQL = 'SELECT * FROM locations WHERE search_query = $1';
-  const sqlParameters = [city];
-client.query(SQL, sqlParameters)
-  .then(results => {
-    let { rowCount, rows } = results
-    
-
-    if (rowCount === 0) {
-      superagent.get(url)
-      .query({
-        key: process.env.GEO_KEY,
-        q: city,
-        format: 'json'
-      })
-      .then(locationResponse => {
-        let geoData = locationResponse.body;
-        console.log(geoData);
-        const location = new Location(city, geoData);
-        setLocationInDB(location);
-        response.send(location);
-      })
+  getLocationFromDB(city).then(location => {
+    if (location) {
+      console.log('Location from database', location);
+      return location;
     } else {
-      console.log('using saved data!');
-      response.json(results.rows[0]);
+      return getLocationFromAPI(city);
     }
-   
-  })
+  }).then(result => {
+    response.send(result);
+  }).catch(err => {
+    console.log(err);
+    errorHandler(err, request, response);
+  });
+}
+
+//Using api to get location
+function getLocationFromAPI(city) {
+  console.log('requesting info from api');
+  const url = 'https://us1.locationiq.com/v1/search.php';
+  return superagent.get(url)
+    .query({
+      key: process.env.GEO_KEY,
+      q: city,
+      format: 'json'
+    })
+    .then(locationResponse => {
+      let geoData = locationResponse.body;
+      const location = new Location(city, geoData);
+      setLocationInDB(location);
+      return location;
+    }).catch(err => {
+      console.log(err);
+      errorHandler(err, request, response);
+    });
 }
 
 function setLocationInDB(location) {
   const SQL2 = 'INSERT INTO locations(search_query, formatted_query, latitude, longitude) VALUES($1, $2, $3, $4)';
   const sqlParameters2 = [location.search_Query, location.formatted_query, location.latitude, location.longitude];
-  client.query(SQL2, sqlParameters2);
+  client.query(SQL2, sqlParameters2).then(result => {
+    console.log('location cached', result);
+  }).catch(err => {
+    console.log(err);
+    errorHandler(err, request, response);
+  });
 }
 //Route Handler for weather
 app.get('/weather', weatherHandler);
@@ -150,7 +181,7 @@ function Location(city, geoData) {
   this.formatted_query = geoData[0].display_name;
   this.latitude = parseFloat(geoData[0].lat);
   this.longitude = parseFloat(geoData[0].lon);
-  
+
 }
 function Weather(weatherData) {
   this.forecast = weatherData.weather.description;
@@ -177,7 +208,7 @@ client.connect()
     console.log('PG connected!');
     app.listen(PORT, () => console.log(`App is listening on ${PORT}`));
   })
-  .catch( err => {
+  .catch(err => {
     throw `PG ERROR! : ${err.message}`
   });
 
