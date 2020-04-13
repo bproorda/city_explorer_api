@@ -13,7 +13,7 @@ City explorer takes in the user's city information, then gives the users, the we
 
 ## Architecture
 <!-- Provide a detailed description of the application design. What technologies (languages, libraries, etc) you're using, and any other relevant design information. -->
-Using Node.js, Express, and Heroku
+Using Node.js, Express, postgresSQL, and Heroku
 
 ## Change Log
 <!-- Use this area to document the iterative changes made to your application as each feature is successfully implemented. Use time stamps. Here's an examples:
@@ -23,3 +23,5 @@ Using Node.js, Express, and Heroku
 ## Credits and Collaborations
 <!-- Give credit (and a link) to other people or resources that helped you build this application. -->
 -->
+
+![FlowChart](./images/City-Explorer-BPR-Flow.jpg);
